@@ -1,0 +1,10 @@
+datasets/
+models/
+experiments/
+reports/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.pt
+*.pth
+.venv/
