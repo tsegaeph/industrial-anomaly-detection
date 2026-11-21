@@ -1,6 +1,7 @@
-datasets/
-experiments/
-reports/
+/datasets/
+/models/
+/experiments/
+/reports/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
