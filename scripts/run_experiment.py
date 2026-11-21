@@ -88,6 +88,20 @@ def run_category(cfg: dict, df: pd.DataFrame, cat: str, out: Path) -> dict:
     return row
 
 
+def apply_overrides(cfg: dict, overrides: list[str]) -> dict:
+    """Apply KEY=VALUE overrides; dotted keys address nested dicts (e.g. params.coreset_ratio=0.01)."""
+    for item in overrides:
+        key, sep, raw = item.partition("=")
+        if not sep:
+            raise ValueError(f"Override must look like key=value, got {item!r}")
+        *parents, leaf = key.split(".")
+        node = cfg
+        for p in parents:
+            node = node.setdefault(p, {})
+        node[leaf] = yaml.safe_load(raw)
+    return cfg
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
@@ -95,13 +109,20 @@ def main() -> None:
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--categories", nargs="+", default=None, help="override categories in config")
     ap.add_argument("--force", action="store_true", help="recompute even if results exist")
+    ap.add_argument("--set", dest="overrides", nargs="+", default=[], metavar="KEY=VALUE",
+                    help="override config values, e.g. --set name=x image_size=384 params.coreset_ratio=0.01")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     cfg = yaml.safe_load(Path(args.config).read_text())
+    base_name = cfg["name"]
+    cfg = apply_overrides(cfg, args.overrides)
+    if args.overrides and cfg["name"] == base_name:
+        raise SystemExit("When using --set, also set name=<new_name> so results are not mixed up.")
+
     out = Path(args.out_dir) / cfg["name"]
     out.mkdir(parents=True, exist_ok=True)
-    shutil.copy(args.config, out / "config.yaml")
+    (out / "config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))   # the config actually used
     set_seed(cfg["seed"])
 
     df = build_index(args.data_root)
@@ -125,7 +146,6 @@ def main() -> None:
     with pd.option_context("display.float_format", "{:.4f}".format, "display.width", 200):
         print(table.to_string(index=False))
     logger.info("Saved to %s", out)
-
 
 if __name__ == "__main__":
     main()
