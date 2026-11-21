@@ -66,7 +66,7 @@ class PaDiM:
             xs = Xc[:, :, s:s + chunk]
             cov[s:s + chunk] = torch.einsum("ndc,nec->cde", xs, xs) / (N - 1)
         cov += self.cfg["eps"] * torch.eye(d, device=self.device)
-        self.inv_cov = torch.linalg.inv(cov.double()).float()  # float64 inverse for stability
+        self.inv_cov = torch.linalg.inv(cov.double().cpu()).float().to(self.device)
         logger.info("PaDiM fitted on %d images: d=%d, positions=%d", N, d, S)
         return self
 
