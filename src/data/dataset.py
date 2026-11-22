@@ -1,6 +1,8 @@
 """PyTorch dataset and preprocessing for MVTec AD."""
 from __future__ import annotations
 
+from typing import Callable
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -12,10 +14,19 @@ from src.data.mvtec import load_image, load_mask
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
+# A corruption maps (resized uint8 HxWx3 image, seed=int) -> uint8 image of the same shape.
+Corruption = Callable[..., np.ndarray]
 
-def preprocess_image(image: np.ndarray, image_size: int) -> torch.Tensor:
-    """HxWx3 uint8 RGB -> normalized 3 x S x S float tensor (full image, no crop)."""
+
+def preprocess_image(image: np.ndarray, image_size: int, corruption: Corruption | None = None,
+                     seed: int = 0) -> torch.Tensor:
+    """HxWx3 uint8 RGB -> normalized 3 x S x S float tensor (full image, no crop).
+
+    An optional corruption (robustness experiments only) is applied to the resized uint8 image.
+    """
     resized = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
+    if corruption is not None:
+        resized = corruption(resized, seed=seed)
     x = resized.astype(np.float32) / 255.0
     x = (x - IMAGENET_MEAN) / IMAGENET_STD
     return torch.from_numpy(x).permute(2, 0, 1).contiguous()
@@ -37,11 +48,12 @@ class MVTecDataset(Dataset):
     defect_type, image_path.
     """
 
-    def __init__(self, df: pd.DataFrame, image_size: int = 256) -> None:
+    def __init__(self, df: pd.DataFrame, image_size: int = 256, corruption: Corruption | None = None) -> None:
         if len(df) == 0:
             raise ValueError("Empty DataFrame passed to MVTecDataset")
         self.df = df.reset_index(drop=True)
         self.image_size = image_size
+        self.corruption = corruption
 
     def __len__(self) -> int:
         return len(self.df)
@@ -51,7 +63,7 @@ class MVTecDataset(Dataset):
         image = load_image(row.image_path)
         mask = load_mask(row.mask_path, image.shape[:2])
         return {
-            "image": preprocess_image(image, self.image_size),
+            "image": preprocess_image(image, self.image_size, self.corruption, seed=idx),
             "mask": preprocess_mask(mask, self.image_size),
             "label": int(row.label),
             "category": row.category,
@@ -77,8 +89,8 @@ def subsample_normals(train_df: pd.DataFrame, n: int, seed: int = 0) -> pd.DataF
     return train_df.sample(n=n, random_state=seed).reset_index(drop=True)
 
 
-def make_loader(df: pd.DataFrame, image_size: int = 256, batch_size: int = 16,
-                shuffle: bool = False, num_workers: int = 2) -> DataLoader:
+def make_loader(df: pd.DataFrame, image_size: int = 256, batch_size: int = 16, shuffle: bool = False,
+                num_workers: int = 2, corruption: Corruption | None = None) -> DataLoader:
     """DataLoader over a split. Colab has few CPU cores, so keep num_workers small."""
-    return DataLoader(MVTecDataset(df, image_size), batch_size=batch_size, shuffle=shuffle,
+    return DataLoader(MVTecDataset(df, image_size, corruption), batch_size=batch_size, shuffle=shuffle,
                       num_workers=num_workers, pin_memory=torch.cuda.is_available())
