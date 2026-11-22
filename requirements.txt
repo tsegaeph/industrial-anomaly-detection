@@ -1,0 +1,11 @@
+# Versions of the Colab environment the experiments were run in.
+# On Colab, torch/torchvision are preinstalled: do not reinstall them there.
+torch==2.14.1
+torchvision==0.29.1
+numpy==2.4.6
+pandas==2.2.3
+matplotlib==3.10.0
+pillow==11.3.0
+opencv-python-headless>=4.10
+scikit-learn==1.6.1
+PyYAML==6.0.3
