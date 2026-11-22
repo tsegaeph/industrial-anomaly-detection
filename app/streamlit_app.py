@@ -66,7 +66,9 @@ with left:
         sample = APP_DIR / "samples" / f"{category}_{kind}.png"
         if sample.exists():
             image = np.asarray(Image.open(sample).convert("RGB"))
-    scale = st.slider("Threshold scale (lower = more sensitive)", 0.7, 1.3, 1.0, 0.05)
+        scale = st.slider("Threshold scale (lower = more sensitive)", 0.7, 1.3, 1.0, 0.05,
+                      help="Thresholds come from normal training images only. For hard categories "
+                           "like screw, a lower scale catches more defects but raises false alarms.")
 
 with right:
     if image is None:
