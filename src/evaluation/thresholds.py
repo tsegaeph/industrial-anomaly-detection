@@ -13,10 +13,11 @@ from src.evaluation.metrics import image_scores
 
 
 def threshold_rules(heldout_scores: np.ndarray) -> dict[str, float]:
-    """Rules that use normal data only. Both are fixed in advance."""
+    """Rules that use normal data only. All are fixed in advance."""
     s = np.asarray(heldout_scores, dtype=np.float64)
     std = s.std(ddof=1) if len(s) > 1 else 0.0
-    return {"max_heldout": float(s.max()), "mean_plus_3std": float(s.mean() + 3.0 * std)}
+    return {"max_heldout": float(s.max()), "p99": float(np.percentile(s, 99)),
+            "mean_plus_3std": float(s.mean() + 3.0 * std)}
 
 
 def classification_metrics(scores: np.ndarray, labels: np.ndarray, threshold: float) -> dict[str, float]:
@@ -37,10 +38,11 @@ def oracle_best_f1(scores: np.ndarray, labels: np.ndarray) -> float:
     return float(np.max(2 * p * r / np.clip(p + r, 1e-12, None)))
 
 
-def evaluate_thresholds(exp_dir: str | Path, categories) -> pd.DataFrame:
-    """One row per (category, rule). Reads saved test maps and calibration_heldout_scores.json."""
+def evaluate_thresholds(exp_dir: str | Path, categories,
+                        calib_file: str = "calibration_heldout_scores.json") -> pd.DataFrame:
+    """One row per (category, rule). Reads saved test maps and the given calibration scores file."""
     exp_dir = Path(exp_dir)
-    calib = json.loads((exp_dir / "calibration_heldout_scores.json").read_text())
+    calib = json.loads((exp_dir / calib_file).read_text())
     rows = []
     for cat in categories:
         d = load_maps(exp_dir, cat)
