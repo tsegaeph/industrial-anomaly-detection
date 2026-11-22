@@ -53,6 +53,7 @@ class AnomalyPredictor:
 
     def _model(self, category: str) -> PatchCore:
         if category not in self._models:
+            self._models = {}   # keep one model in RAM: free hosting tiers are memory-limited
             self._models[category] = PatchCore.load(self.models_dir / f"model_{category}.pt", device=self.device)
         return self._models[category]
 
