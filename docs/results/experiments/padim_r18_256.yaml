@@ -1,0 +1,12 @@
+name: padim_r18_256
+model: padim
+image_size: 256
+batch_size: 16
+n_train: null        # null = all normal training images
+seed: 0
+save_model: false
+params:
+  backbone: resnet18
+  d_reduced: 100
+  eps: 0.01
+  sigma: 4.0

@@ -1,0 +1,13 @@
+name: patchcore_wrn50_256
+model: patchcore
+image_size: 256
+batch_size: 8
+n_train: null
+seed: 0
+save_model: false
+params:
+  backbone: wide_resnet50_2
+  layers: [layer2, layer3]
+  coreset_ratio: 0.1
+  target_dim: 1024
+  sigma: 4.0

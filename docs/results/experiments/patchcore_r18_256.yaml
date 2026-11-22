@@ -1,0 +1,15 @@
+name: patchcore_r18_256
+model: patchcore
+image_size: 256
+batch_size: 8
+n_train: null
+seed: 0
+save_model: false
+params:
+  backbone: resnet18
+  layers:
+  - layer2
+  - layer3
+  coreset_ratio: 0.1
+  target_dim: 384
+  sigma: 4.0
